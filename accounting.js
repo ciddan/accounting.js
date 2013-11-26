@@ -26,16 +26,17 @@
 	// currency and number formatting
 	lib.settings = {
 		currency: {
-			symbol : "$",		// default currency symbol is '$'
-			format : "%s%v",	// controls output: %s = symbol, %v = value (can be object, see docs)
-			decimal : ".",		// decimal point separator
-			thousand : ",",		// thousands separator
-			precision : 2,		// decimal places
-			grouping : 3		// digit grouping (not implemented yet)
+			suffix : "",
+			prefix : "$",				// default currency symbol is '$'
+			format : "%p%v%s",	// controls output: %p = prefix, %v = value, %s = suffix (can be object, see docs)
+			decimal : ".",			// decimal point separator
+			thousand : ",",			// thousands separator
+			precision : 2,			// decimal places
+			grouping : 3				// digit grouping (not implemented yet)
 		},
 		number: {
-			precision : 0,		// default precision on numbers is 0
-			grouping : 3,		// digit grouping (not implemented yet)
+			precision : 0,			// default precision on numbers is 0
+			grouping : 3,				// digit grouping (not implemented yet)
 			thousand : ",",
 			decimal : ".",
 			strip_insignificant_zeros : false
@@ -279,15 +280,15 @@
 	/**
 	 * Format a number into currency
 	 *
-	 * Usage: accounting.formatMoney(number, symbol, precision, thousandsSep, decimalSep, format)
-	 * defaults: (0, "$", 2, ",", ".", "%s%v")
+	 * Usage: accounting.formatMoney(number, precision, prefix, suffix, thousandsSep, decimalSep, format)
+	 * defaults: (0, 2, "", "", ",", ".", "%p%v%s")
 	 *
 	 * Localise by overriding the symbol, precision, thousand / decimal separators and format
 	 * Second param can be an object matching `settings.currency` which is the easiest way.
 	 *
 	 * To do: tidy up the parameters
 	 */
-	var formatMoney = lib.formatMoney = function(number, symbol, precision, thousand, decimal, format) {
+	var formatMoney = lib.formatMoney = function(number, precision, prefix, suffix, thousand, decimal, format) {
 		// Resursively format arrays:
 		if (isArray(number)) {
 			return map(number, function(val){
@@ -300,8 +301,9 @@
 
 		// Build options object from second param (if object) or all params, extending defaults:
 		var opts = defaults(
-				(isObject(symbol) ? symbol : {
-					symbol : symbol,
+				(isObject(precision) ? precision : {
+					prefix : prefix,
+					suffix : suffix,
 					precision : precision,
 					thousand : thousand,
 					decimal : decimal,
@@ -317,7 +319,13 @@
 			useFormat = number > 0 ? formats.pos : number < 0 ? formats.neg : formats.zero;
 
 		// Return with currency symbol added:
-		return useFormat.replace('%s', opts.symbol).replace('%v', formatNumber(Math.abs(number), checkPrecision(opts.precision), opts.thousand, opts.decimal));
+		var result = useFormat.replace('%p', opts.prefix);
+		result = result.replace('%s', opts.suffix);
+		result = result.replace(
+			'%v', formatNumber(Math.abs(number), checkPrecision(opts.precision), opts.thousand, opts.decimal)
+		);
+
+		return result;
 	};
 
 
@@ -333,13 +341,14 @@
 	 * NB: `white-space:pre` CSS rule is required on the list container to prevent
 	 * browsers from collapsing the whitespace in the output strings.
 	 */
-	lib.formatColumn = function(list, symbol, precision, thousand, decimal, format) {
+	lib.formatColumn = function(list, precision, prefix, suffix, thousand, decimal, format) {
 		if (!list) return [];
 
 		// Build options object from second param (if object) or all params, extending defaults:
 		var opts = defaults(
-				(isObject(symbol) ? symbol : {
-					symbol : symbol,
+				(isObject(precision) ? precision : {
+					prefix : prefix,
+					suffix : suffix,
 					precision : precision,
 					thousand : thousand,
 					decimal : decimal,
